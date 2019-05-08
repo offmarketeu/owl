@@ -67,7 +67,9 @@ ui <- fluidPage(
                  h3(),
                  tableOutput("alm"),
                  h3(),
-                 h3(textOutput("fhisto")))
+                 h3(textOutput("Criteria")),
+                 tableOutput("tempo_alm")
+                 )
       )
     )
   )
@@ -180,8 +182,7 @@ server <- function(input, output) {
   tempo_int<- as.data.frame(result)
   format(result, big.mark=".")
   })
-  
-  
+
   
   tempo1_int<- reactive({res<-dbSendQuery(con, paste0("SELECT U_CdG, Importe_2, COD_DIV1, RU_ID_ACTIVOS_INTANGIBLES FROM PYG WHERE EPIGRAFE='907' OR EPIGRAFE='1010902' AND fecha='" , fcal() , "'", sep=""))
   result1<-dbFetch(res)
@@ -211,6 +212,20 @@ server <- function(input, output) {
     result<-dbFetch(res)          
     format(result, big.mark=".")
   })
+  
+  
+  ####################################################
+  # RU vs Criteria
+  ####################################################
+  
+  output$tempo_alm<- renderTable({
+  res<-dbSendQuery(con, paste0("SELECT Criterias.CRITERIA FROM Criterias, ADDON WHERE ADDON.BU_VERT='", input$buvert , "' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='ALM' GROUP BY Criterias.CRITERIA", sep=""))
+  result<-dbFetch(res)
+  tempo_alm<- as.data.frame(result)
+  format(result, big.mark=".")
+  })
+  
+  
   
   
 }
