@@ -7,6 +7,9 @@ library(shiny)
 library(dplyr)
 library(DBI)
 library(DT)
+library(ggplot2)
+library(lubridate)
+
 options(scipen =9999, digits=2, OutDec=",", encoding = 'ISO-8859-1')
 
 
@@ -14,8 +17,12 @@ options(scipen =9999, digits=2, OutDec=",", encoding = 'ISO-8859-1')
 ui <- fluidPage(
   
   
-  # Application title
-  titlePanel("EC ANALISYS"),
+  headerPanel(
+    list(HTML('<img src="logo.png"/>'), "EC Analysis"),
+    windowTitle=""
+  ),
+  
+  
   
   # Options to select information
   sidebarLayout(
@@ -68,7 +75,8 @@ ui <- fluidPage(
                  tableOutput("alm"),
                  h3(),
                  h3(textOutput("Criteria")),
-                 tableOutput("tempo_alm")
+                 plotOutput("plot_alm1"),
+                 tableOutput("alm1")
                  )
       )
     )
@@ -218,12 +226,21 @@ server <- function(input, output) {
   # RU vs Criteria
   ####################################################
   
-  output$tempo_alm<- renderTable({
-  res<-dbSendQuery(con, paste0("SELECT Criterias.CRITERIA FROM Criterias, ADDON WHERE ADDON.BU_VERT='", input$buvert , "' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='ALM' GROUP BY Criterias.CRITERIA", sep=""))
-  result<-dbFetch(res)
-  tempo_alm<- as.data.frame(result)
-  format(result, big.mark=".")
+  
+  
+  
+  tempo_alm<- reactive({
+    
+    res<-dbSendQuery(con, paste0("SELECT VECTORES.* FROM VECTORES, Criterias, ADDON WHERE VECTORES.CRITERIA=Criterias.CRITERIA AND ADDON.BU_VERT='", input$buvert, "' AND VECTORES.fecha='", fcal() ,"' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='ALM' GROUP BY fdata", sep=""))
+    result<-dbFetch(res)
+    tempo_alm<- as.data.frame(result)
   })
+  
+  
+  output$plot_alm1 <-  renderPlot({
+    ggplot(tempo_alm(), aes(x=fdata, y=PNL))+geom_point()
+    
+  })  
   
   
   
