@@ -18,10 +18,9 @@ ui <- fluidPage(
   
   
   headerPanel(
-    list(HTML('<p><img src="logo.png"/></p>'), "EC Analysis"),
-    windowTitle=""
+    img(src="descarga.jpg",height=50)
   ),
-  
+  titlePanel("OWL-EC Control"),
   
   
   # Options to select information
@@ -74,10 +73,10 @@ ui <- fluidPage(
                  h3(),
                  tableOutput("alm"),
                  h3(),
-                 h3(textOutput("Criteria")),
-                 plotOutput("plot_alm1"),
+                 h3("P&L"),
                  h3(),
-                 plotOutput("plot_alm2")
+                 h3(textOutput("Criteria")),
+                 plotOutput("plot_alm1")
                  
                  ),
         ##############################################################
@@ -253,15 +252,13 @@ server <- function(input, output) {
     tempo_alm<- as.data.frame(result)
   })
   
-  
   output$plot_alm1 <-  renderPlot({
-    ggplot(tempo_alm(), aes(x=fdata, y=PNL))+geom_point()
+    ggplot(tempo_alm(), aes(x=fdata, y=PNL,  group = 1))+ geom_line(color = "red")
+  
   
   })
   
-  output$plot_alm2 <-  renderPlot({
-    ggplot(tempo_alm(), aes(x=fdata, y=PNL))+geom_density()
-  })  
+  
   
   ####################################################
   # CREDITO
@@ -282,7 +279,7 @@ server <- function(input, output) {
   ####################################################
   
   output$cre1<- renderTable({
-    res<-dbSendQuery(con, paste0("SELECT INSTRUMENTO_LOCAL, SUM(EAD) AS EAD, SUM(PD*EAD)/(EAD) AS PD_MED, SUM(PD*EAD*LGD)/(PD*EAD) AS LGD_MED, AVG(CORR_MAY), AVG(CORR_MIN)   FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Credit' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+    res<-dbSendQuery(con, paste0("SELECT INSTRUMENTO_LOCAL, SUM(EAD) AS EAD, SUM(PD_SB*EAD)/SUM(EAD) AS PD_MED, SUM(PD_SB*EAD*LGD)/SUM(PD_SB*EAD) AS LGD_MED, AVG(CORR_MAY), AVG(CORR_MIN), AVG(PLAZO)   FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Credit' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
     result<-dbFetch(res)          
     format(result, big.mark=".")
   })
