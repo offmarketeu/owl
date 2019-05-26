@@ -93,7 +93,51 @@ ui <- fluidPage(
                  tableOutput("cre1")
                  
                  
-        )
+        ),
+        tabPanel("DTAs",
+                 h3(),
+                 h3(textOutput("bu_dta")), 
+                 h3(),
+                 h3("Capital"),
+                 h3(),
+                 tableOutput("dta"),
+                 h3(),
+                 h3("Parametros"),
+                 h3(),
+                 tableOutput("dta1")
+                 
+                 
+        ), 
+        tabPanel("Fondo Comercio",
+                 h3(),
+                 h3(textOutput("bu_gw")), 
+                 h3(),
+                 h3("Capital"),
+                 h3(),
+                 tableOutput("gw"),
+                 h3(),
+                 h3("Parametros"),
+                 h3(),
+                 tableOutput("gw1")
+                 
+                 
+        ),
+        ##############################################################
+        tabPanel("Mercado",
+                 h3(),
+                 h3(textOutput("bu_alm")), 
+                 h3(),
+                 h3("Capital"),
+                 h3(),
+                 tableOutput("alm"),
+                 h3(),
+                 h3("P&L"),
+                 h3(),
+                 h3(textOutput("Criteria")),
+                 plotOutput("plot_alm1")
+                 
+        ),
+        
       )
     )
   )
@@ -282,6 +326,91 @@ server <- function(input, output) {
     res<-dbSendQuery(con, paste0("SELECT INSTRUMENTO_LOCAL, SUM(EAD) AS EAD, SUM(PD_SB*EAD)/SUM(EAD) AS PD_MED, SUM(PD_SB*EAD*LGD)/SUM(PD_SB*EAD) AS LGD_MED, AVG(CORR_MAY), AVG(CORR_MIN), AVG(PLAZO)   FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Credit' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
     result<-dbFetch(res)          
     format(result, big.mark=".")
+  })
+  
+  
+  ####################################################
+  # DTAs
+  # Capital
+  ####################################################
+  
+  output$bu_dta<- reactive({input$buvert})
+  
+  output$dta<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT INSTRUMENTO_LOCAL, SUM(EC_DW_RTU), SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='DTAs' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+    result<-dbFetch(res)          
+    format(result, big.mark=".")
+  })
+  
+  
+  ####################################################
+  # Saldo
+  ####################################################
+  
+  output$dta1<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT sum(SALDO_BALANCE) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='DTAs' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+    result<-dbFetch(res)          
+    format(result, big.mark=".")
+  })
+  
+  ####################################################
+  # Fondo de Comercio
+  # Capital
+  ####################################################
+  
+  output$bu_gw<- reactive({input$buvert})
+  
+  output$gw<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT INSTRUMENTO_LOCAL, SUM(EC_DW_RTU), SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Gooodwill' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+    result<-dbFetch(res)          
+    format(result, big.mark=".")
+  })
+  
+  
+  ####################################################
+  # Saldo
+  ####################################################
+  
+  output$gw1<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT sum(SALDO_BALANCE) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Gooodwill' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+    result<-dbFetch(res)          
+    format(result, big.mark=".")
+  })
+  
+  ####################################################
+  # Mercado
+  # Capital
+  ####################################################
+  
+  output$bu_mkt<- reactive({input$buvert})
+  
+  output$mkt<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT SUM(EC_DW_RTU), SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='ALM' GROUP BY BU_VERT", sep=""))
+    result<-dbFetch(res)          
+    format(result, big.mark=".")
+  })
+  
+  
+  ####################################################
+  # RU vs Criteria
+  ####################################################
+  
+  
+  
+  
+  tempo_mkt<- reactive({
+    res<-dbSendQuery(con, paste0("SELECT VECTORES.* FROM VECTORES, Criterias, ADDON WHERE VECTORES.CRITERIA=Criterias.CRITERIA AND ADDON.BU_VERT='", input$buvert, "' AND VECTORES.fecha='", fcal() ,"' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='Market' GROUP BY fdata", sep=""))
+    result<-dbFetch(res)
+    tempo_mkt<- as.data.frame(result)
+  })
+  
+  output$plot_mkt2 <-  renderIU({
+    Crit<- unique(tempo_mkt()$Criterias)
+    for (i in crit) {
+      tempo_mkt2<- tempo_mkt()[Criterias==i,]  
+      ggplot(tempo_mkt2, aes(x=fdata, y=PNL,  group = 1))+ geom_line(color = "red")
+    }
+    
   })
   
   
