@@ -30,7 +30,8 @@ ui <- fluidPage(
       selectInput("buvert","Unit: ", choices=c("Corporate Activities", "Argentina", "Brazil", "Chile", "Colombia", "Other Europe and Asia", "Spain")),
       selectInput("year","Year: ", c("2018","2019"), "2019"),
       selectInput("month","Month: ", c("01","02","03","04","05","06","07","08","09","10","11","12")),
-      uiOutput("Prueba")
+      uiOutput("Prueba"),
+      width=3
     ),
     
     # Show information
@@ -60,11 +61,13 @@ ui <- fluidPage(
                  h3(),
                  tableOutput("int"),
                  h3(),
+                 h3("Capital - Promedio Historico"),
+                 h3(),
+                 tableOutput("int_h"),
+                 h3(),
                  h3("Saldos"),
                  h3(),
-                 tableOutput("tec1"),
-                 h3(),
-                 tableOutput("hist")),
+                 tableOutput("tec1")),
         ##############################################################
         tabPanel("ALM",
                  h3(),
@@ -157,9 +160,18 @@ ui <- fluidPage(
                  h3(),
                  h3("Saldos"),
                  h3(),
-                 tableOutput("neg1"))
+                 tableOutput("neg1")),
+        ##############################################################
+        tabPanel("Pensiones",
+                 h3(),
+                 h3(textOutput("bu_pen")), 
+                 h3(),
+                 h3("Capital"),
+                 h3(),
+                 tableOutput("pen"))
         
-      )
+      ),
+      width=9
     )
   )
 )
@@ -170,23 +182,39 @@ server <- function(input, output) {
   # General data
   con <- dbConnect(RSQLite::SQLite(), "C:/Users/n040485/Documents/owl/owl.db")
   
+  
   fcal<- reactive({
             paste(input$year,"-",input$month, sep="")
          })
   
-  
-  fhist<- reactive({
-    mes=c("01","02","03","04","05","06")
-    sm <- "2018-12"
-    for (i in mes) {
-      if (i< input$month) {
-        ff <- paste(input$year,i, sep="-")
-        sm <- paste(sm, ff, sep="|")
-      } 
-    }  
+  mest<- reactive({
+    as.numeric(input$month)
   })
   
-  #output$fhisto<- fhist()
+  yeart<- reactive({
+    as.numeric(input$year)
+  })
+  
+  fhisto<- reactive({
+    sm <- "'2018-12'"
+    for (i in 1:12) {
+      if (i< mest()) {
+        if (i<10) {
+           i_f<- paste("0", i,sep="")
+           
+        } else
+        {
+          i_f<- i
+        }  
+        ff <- paste("'",paste(yeart(),i, sep="-"),"'",sep="")
+        sm <- paste(sm, ff, sep=",")
+      } 
+    }
+    fhisto<- as.character(sm)
+  })
+  
+  
+  
   
   ####################################################
   # update select Unit
@@ -216,24 +244,25 @@ server <- function(input, output) {
   # Capital - historico
   ####################################################
   
-  #output$am_h<- renderTable({
-  #  res<-dbSendQuery(con, paste0("SELECT EC_DW_RTU,  REPORTING_V, EC_DW_TOTAL FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha LIKE '%", finit() ,"%' AND TIPO_RIESGO='Activos Materiales' GROUP BY BU_VERT", sep=""))
-  #  result<-dbFetch(res)
+  output$am_h<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT AVG(EC_DW_RTU),  AVG(REPORTING_V), AVG(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha IN (", fhisto() ,") AND TIPO_RIESGO='Material Assets' GROUP BY BU_VERT", sep=""))
+    result<-dbFetch(res)
   
+  })
+  
+  #output$fhistok <- reactive ({
+  #  paste0("SELECT SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha IN (", fhisto() ,") AND TIPO_RIESGO='Material Assets' GROUP BY BU_VERT", sep="")
   #})
-  
-  
   
   ####################################################
   # Saldos
   ####################################################
+  
   tempo_am<- reactive({res<-dbSendQuery(con, paste0("SELECT RU_ID FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal(), "' AND TIPO_RIESGO='Material Assets' GROUP BY BU_VERT,fecha", sep=""))
   result<-dbFetch(res)
   format(result, big.mark=".")
   tempo_am<- as.data.frame(result)
   })
-  
-  
   
   tempo1_am<- reactive({res<-dbSendQuery(con, paste0("SELECT U_CdG, Importe_2, COD_DIV1, RU_ID_ACTIVOS_MATERIALES FROM PYG WHERE EPIGRAFE='101104' OR EPIGRAFE='1010901' AND fecha='" , fcal() , "'", sep=""))
   result1<-dbFetch(res)
@@ -242,7 +271,7 @@ server <- function(input, output) {
   
   })
   
-  #output$tec<- renderTable({left_join(tempo_am(), tempo1_am(), by=c("RU_ID"="RU_ID_ACTIVOS_MATERIALES"))})
+  
   
   output$tec<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_MATERIALES FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('101104','1010901') AND PYG.fecha='" , fcal() , "' AND ADDON.BU_VERT='", input$buvert ,"' AND PYG.RU_ID_ACTIVOS_MATERIALES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_INTANGIBLES" , sep=""))
   result2<-dbFetch(res)
@@ -259,6 +288,17 @@ server <- function(input, output) {
     res<-dbSendQuery(con, paste0("SELECT SUM(EC_DW_RTU), SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Intangible assets' GROUP BY BU_VERT", sep=""))
     result<-dbFetch(res)          
     format(result, big.mark=".")
+  })
+  
+  ####################################################
+  # Activos intangibles
+  # Capital - historico
+  ####################################################
+  
+  output$int_h<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT AVG(EC_DW_RTU),  AVG(REPORTING_V), AVG(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha IN (", fhisto() ,") AND TIPO_RIESGO='Intangible assets' GROUP BY BU_VERT", sep=""))
+    result<-dbFetch(res)
+  
   })
   
   ####################################################
@@ -487,6 +527,19 @@ server <- function(input, output) {
   output$tec<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_NEGOCIO FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('101104','1010901') AND PYG.fecha='" , fcal() , "' AND ADDON.BU_VERT='", input$buvert ,"' AND PYG.RU_ID_ACTIVOS_MATERIALES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_NEGOCIO" , sep=""))
   result2<-dbFetch(res)
   format(result2, big.mark=".")
+  })
+  
+  ####################################################
+  # Pensiones
+  # Capital
+  ####################################################
+  
+  output$bu_pen<- reactive({input$buvert})
+  
+  output$pen<- renderTable({
+    res<-dbSendQuery(con, paste0("SELECT SUM(EC_DW_RTU), SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", input$buvert , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Pensions' GROUP BY BU_VERT", sep=""))
+    result<-dbFetch(res)          
+    format(result, big.mark=".")
   })
   
   
