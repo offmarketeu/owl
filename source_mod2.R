@@ -194,79 +194,75 @@ EC4_UI <- function (id) {
 EC4 <- function (input, output, session, act1, act2){
   
   
+  fbase1 <- reactive( {
+    fbase1<-read_excel(as.character(act1()), skip=4, col_names=TRUE, na = "")
+    fbase1[is.na(fbase1)]<-0
+    fbase1<-fbase1[,c(1:4, 70:78)]
+    #fmod1$GEOGRAPHY2[(fmod1$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
+  })
   
-  fbase1 <- DT::renderDataTable( {
-      fbase1<- read_excel( act1(), skip=4, col_names=TRUE, na = "")
-      fbase1[is.na(fbase1)]<-0
-      fbase1<-fbase1[,c(1:4, 70:78)]
+  fbase2 <- reactive( {
+    fbase2<-read_excel(as.character(act2()), skip=4, col_names=TRUE, col_types="numeric",na = "")
+  })
+  
+  
+  fbase <- reactive({
+    fbase<- bind_cols(as.data.frame(fbase1()),as.data.frame(fbase2()))
+    as.data.frame(fbase)
+    fbase<- fbase[, - c(14:17,83:91)]
+    fbase %>% mutate_if(is.numeric , replace_na, replace = 0)
+    fbase %>% mutate(GEOGRAPHY2=ifelse(TIPO_RIESGO=="Goodwill", "Corporate Activities", GEOGRAPHY2))
+    
   })
   
   
   
   
-  fbase2 <- DT::renderDataTable( {
-                  read_excel(act1(),  skip=4, col_names=TRUE, col_types="numeric",na = "")
-                  fbase2[is.na(fbase2)]<-0
-             })
-  
-  fbase<-  DT::renderDataTable( {
-    fbase<-bind_cols(fbase1(),fbase2())
-    fbase<- fbase[, - c(14:17,83:91)]
-    fbase[is.na(fbase)]<-0
-    fbase$GEOGRAPHY2[(fbase$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
-    })
-    
-  
-  
-  # Especial FC
-  #fbase$GEOGRAPHY2[(fbase$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
   
   # Proceso de fusion mod
-  fmod1 <- reactiveTable( {
-    fmod1<-read_excel(act2(), skip=4, col_names=TRUE, na = "")
+  
+  fmod1 <- reactive( {
+    fmod1<-read_excel(as.character(act2()), skip=4, col_names=TRUE, na = "")
     fmod1[is.na(fmod1)]<-0
     fmod1<-fmod1[,c(1:4, 70:78)]
-    write.csv2(fmod1, "C:/Users/n040485/Documents/fmod1.csv")
-    
-  })
-    
-  
-  fmod2 <- renderTable( {
-    fmod2<-read_excel(act2(), skip=4, col_names=TRUE, col_types="numeric",na = "")
-    fmod2[is.na(fmod2)]<-0
+    #fmod1$GEOGRAPHY2[(fmod1$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
   })
   
-  fmod<- reactiveTable({
-    fmod<- bind_cols(fmod1,fmod2)
+  fmod2 <- reactive( {
+    fmod2<-read_excel(as.character(act2()), skip=4, col_names=TRUE, col_types="numeric",na = "")
   })
   
-  write.csv2(fmod, "C:/Users/n040485/Documents/fmod.csv")
   
   fmod <- reactive({
-    #fmod<- bind_cols(fmod1(),fmod2)
+    fmod<- bind_cols(as.data.frame(fmod1()),as.data.frame(fmod2()))
+    as.data.frame(fmod)
     fmod<- fmod[, - c(14:17,83:91)]
-    fmod[is.na(fmod)]<-0
-    fmod$GEOGRAPHY2[(fmod$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
-    
+    fmod %>% mutate_if(is.numeric , replace_na, replace = 0)
+    #fmod$GEOGRAPHY2[(fmod$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
+    fmod %>% mutate(GEOGRAPHY2=ifelse(TIPO_RIESGO=="Goodwill", "Corporate Activities", GEOGRAPHY2))
     
   })
   
   
-  
-  
-  totdata<- renderTable( {
-    totdata<-fmod
+  totdata<- reactive ({
+    fmod<- bind_rows(as.data.frame(fbase()),as.data.frame(fmod()))
+    
   })
   
   
-  
-  #output$globaltb <- reactive ({
-  #  totdata() %>% group_by(ID_SIMULACION)%>%
-  #  summarise(EC_DT=sum(EC_DW_TOTAL+EC_DW_TOTAL_CVA)/1000000)
-  #})  
+  #output$globaltb <- renderTable ({
+  #  as.data.frame(fmod())
+  #})
   
   output$globaltb <- reactive ({
-     as.data.frame(totdata)
-  })  
+    totdata() %>% group_by(ID_SIMULACION)%>%
+    summarise(EC_DT=sum(EC_DW_TOTAL+EC_DW_TOTAL_CVA)/1000000)
+  })
+  
+    
+  
+  #output$globaltb <- reactive ({
+  #   as.data.frame(totdata)
+  #})  
   
 }

@@ -5,6 +5,7 @@
 
 library(shiny)
 library(dplyr)
+library(tidyr)
 library(DBI)
 library(DT)
 library(ggplot2)
