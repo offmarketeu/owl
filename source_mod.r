@@ -200,9 +200,9 @@ EC1 <- function (input, output, session){
   
   con <- dbConnect(RSQLite::SQLite(), "C:/Users/n040485/Documents/owl/owl.db")
   
-  tempo_amk<- reactive({res<-dbSendQuery(con, paste0("SELECT BU_VERT FROM ADDON GROUP BY BU_VERT", sep=""))
+  tempo_amk<- reactive({res<-dbSendQuery(con, paste0("SELECT GEOGRAPHY2 FROM ADDON GROUP BY GEOGRAPHY2", sep=""))
   result<-dbFetch(res)
-  tempo_amk<- unique(result$BU_VERT)
+  tempo_amk<- unique(result$GEOGRAPHY2)
   })
   
   output$Prueba<- renderUI({ selectInput("buvert", "Unit:", choices=tempo_amk())})
@@ -226,14 +226,14 @@ EC2 <- function (input, output, session, action, action2, action3){
   
   gen_table <- function(Unit, Fdate, Risk) {
     
-    res<-dbSendQuery(con, paste0("SELECT SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", Unit , "' AND  fecha='", Fdate, "' AND TIPO_RIESGO='", Risk, "' GROUP BY BU_VERT", sep=""))
+    res<-dbSendQuery(con, paste0("SELECT SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE GEOGRAPHY2='", Unit , "' AND  fecha='", Fdate, "' AND TIPO_RIESGO='", Risk, "' GROUP BY GEOGRAPHY2", sep=""))
     result<-dbFetch(res)
     format(result, big.mark=".", justify =c("right"))
   }
   
   gen_table1 <- function(Unit, Fdate, Risk) {
     
-    res<-dbSendQuery(con, paste0("SELECT fecha, SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", Unit , "' AND fecha IN (", Fdate ,") AND TIPO_RIESGO='" , Risk, "' GROUP BY BU_VERT, fecha", sep=""))
+    res<-dbSendQuery(con, paste0("SELECT fecha, SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE GEOGRAPHY2='", Unit , "' AND fecha IN (", Fdate ,") AND TIPO_RIESGO='" , Risk, "' GROUP BY GEOGRAPHY2, fecha", sep=""))
     result<-dbFetch(res)
     format(result, big.mark=".", justify =c("right"))
   }
@@ -312,7 +312,7 @@ EC2 <- function (input, output, session, action, action2, action3){
   # Saldos
   ####################################################
   
-  tempo_am<- reactive({res<-dbSendQuery(con, paste0("SELECT RU_ID FROM ADDON WHERE BU_VERT='", action() , "' AND fecha='", fcal(), "' AND TIPO_RIESGO='Material Assets' GROUP BY BU_VERT,fecha", sep=""))
+  tempo_am<- reactive({res<-dbSendQuery(con, paste0("SELECT RU_ID FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha='", fcal(), "' AND TIPO_RIESGO='Material Assets' GROUP BY GEOGRAPHY2,fecha", sep=""))
   result<-dbFetch(res)
   format(result, big.mark=".")
   tempo_am<- as.data.frame(result)
@@ -326,7 +326,7 @@ EC2 <- function (input, output, session, action, action2, action3){
   })
   
   
-  output$tec<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_MATERIALES FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('101104','1010901') AND PYG.fecha='" , fcal() , "' AND ADDON.BU_VERT='", action() ,"' AND PYG.RU_ID_ACTIVOS_MATERIALES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_INTANGIBLES" , sep=""))
+  output$tec<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_MATERIALES FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('101104','1010901') AND PYG.fecha='" , fcal() , "' AND ADDON.GEOGRAPHY2='", action() ,"' AND PYG.RU_ID_ACTIVOS_MATERIALES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_INTANGIBLES" , sep=""))
   result2<-dbFetch(res)
   format(result2, big.mark=".")
   })
@@ -361,7 +361,7 @@ output$int_h<- renderTable({
 ####################################################
 
 int_avgk<- eventReactive(input$tni_avg, {
-  res<-dbSendQuery(con, paste0("SELECT fecha, SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", action() , "' AND fecha IN (", fhisto() ,") AND TIPO_RIESGO='Intangible assets' GROUP BY BU_VERT, fecha", sep=""))
+  res<-dbSendQuery(con, paste0("SELECT fecha, SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha IN (", fhisto() ,") AND TIPO_RIESGO='Intangible assets' GROUP BY GEOGRAPHY2, fecha", sep=""))
   result<-dbFetch(res)
   result<- lapply(result[, 2:4], mean, na.rm = TRUE)
   format(result, big.mark=".", justify =c("right"))
@@ -374,7 +374,7 @@ output$int_avg<- renderTable({t(int_avgk())})
 ####################################################
 
 
-tempo_int<- reactive({res<-dbSendQuery(con, paste0("SELECT RU_ID FROM ADDON WHERE BU_VERT='", action() , "' AND fecha='", fcal(), "' AND TIPO_RIESGO='Intangible assets' GROUP BY BU_VERT,fecha", sep=""))
+tempo_int<- reactive({res<-dbSendQuery(con, paste0("SELECT RU_ID FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha='", fcal(), "' AND TIPO_RIESGO='Intangible assets' GROUP BY GEOGRAPHY2,fecha", sep=""))
 result<-dbFetch(res)
 tempo_int<- as.data.frame(result)
 format(result, big.mark=".")
@@ -387,7 +387,7 @@ format(result1, big.mark=".")
 tempo1_int<- as.data.frame(result1)
 })
 
-output$tec1<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_INTANGIBLES FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('907','1010902') AND PYG.fecha='" , fcal() , "' AND ADDON.BU_VERT='", action() ,"' AND PYG.RU_ID_ACTIVOS_INTANGIBLES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_INTANGIBLES" , sep=""))
+output$tec1<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_INTANGIBLES FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('907','1010902') AND PYG.fecha='" , fcal() , "' AND ADDON.GEOGRAPHY2='", action() ,"' AND PYG.RU_ID_ACTIVOS_INTANGIBLES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_ACTIVOS_INTANGIBLES" , sep=""))
 result2<-dbFetch(res)
 format(result2, big.mark=".", align="right")
 
@@ -422,7 +422,7 @@ output$alm_h<- renderTable({
 
 tempo_alm<- reactive({
   
-  res<-dbSendQuery(con, paste0("SELECT VECTORES.* FROM VECTORES, Criterias, ADDON WHERE VECTORES.CRITERIA=Criterias.CRITERIA AND ADDON.BU_VERT='", action(), "' AND VECTORES.fecha='", fcal() ,"' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='ALM' GROUP BY fdata", sep=""))
+  res<-dbSendQuery(con, paste0("SELECT VECTORES.* FROM VECTORES, Criterias, ADDON WHERE VECTORES.CRITERIA=Criterias.CRITERIA AND ADDON.GEOGRAPHY2='", action(), "' AND VECTORES.fecha='", fcal() ,"' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='ALM' GROUP BY fdata", sep=""))
   result<-dbFetch(res)
   tempo_alm<- as.data.frame(result)
 })
@@ -451,7 +451,7 @@ output$cre<- renderTable({
 ####################################################
 
 output$cre1<- renderTable({
-  res<-dbSendQuery(con, paste0("SELECT INSTRUMENTO_LOCAL, SUM(EAD) AS EAD, SUM(PD_SB*EAD)/SUM(EAD) AS PD_MED, SUM(PD_SB*EAD*LGD)/SUM(PD_SB*EAD) AS LGD_MED, AVG(CORR_MAY), AVG(CORR_MIN), AVG(PLAZO)   FROM ADDON WHERE BU_VERT='", action() , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Credit' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+  res<-dbSendQuery(con, paste0("SELECT INSTRUMENTO_LOCAL, SUM(EAD) AS EAD, SUM(PD_SB*EAD)/SUM(EAD) AS PD_MED, SUM(PD_SB*EAD*LGD)/SUM(PD_SB*EAD) AS LGD_MED, AVG(CORR_MAY), AVG(CORR_MIN), AVG(PLAZO)   FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Credit' GROUP BY GEOGRAPHY2, INSTRUMENTO_LOCAL", sep=""))
   result<-dbFetch(res)          
   format(result, big.mark=".")
 })
@@ -483,7 +483,7 @@ output$dta_h<- renderTable({
 ####################################################
 
 output$dta1<- renderTable({
-  res<-dbSendQuery(con, paste0("SELECT sum(SALDO_BALANCE) FROM ADDON WHERE BU_VERT='", action() , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='DTAs' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+  res<-dbSendQuery(con, paste0("SELECT sum(SALDO_BALANCE) FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='DTAs' GROUP BY GEOGRAPHY2, INSTRUMENTO_LOCAL", sep=""))
   result<-dbFetch(res)          
   format(result, big.mark=".")
 })
@@ -516,7 +516,7 @@ output$gw_h<- renderTable({
 ####################################################
 
 output$gw1<- renderTable({
-  res<-dbSendQuery(con, paste0("SELECT sum(SALDO_BALANCE) FROM ADDON WHERE BU_VERT='", action() , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Gooodwill' GROUP BY BU_VERT, INSTRUMENTO_LOCAL", sep=""))
+  res<-dbSendQuery(con, paste0("SELECT sum(SALDO_BALANCE) FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha='", fcal() , "' AND TIPO_RIESGO='Gooodwill' GROUP BY GEOGRAPHY2, INSTRUMENTO_LOCAL", sep=""))
   result<-dbFetch(res)          
   format(result, big.mark=".")
 })
@@ -539,7 +539,7 @@ output$mkt<- renderTable({
 ####################################################
 
 output$mkt_h<- renderTable({
-  res<-dbSendQuery(con, paste0("SELECT fecha, SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE BU_VERT='", action() , "' AND fecha IN (", fhisto() ,") AND TIPO_RIESGO='Market' GROUP BY BU_VERT, fecha", sep=""))
+  res<-dbSendQuery(con, paste0("SELECT fecha, SUM(EC_DW_RTU),  SUM(REPORTING_V), SUM(EC_DW_TOTAL) FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha IN (", fhisto() ,") AND TIPO_RIESGO='Market' GROUP BY GEOGRAPHY2, fecha", sep=""))
   result<-dbFetch(res)
   format(result, big.mark=".", justify =c("right"))
   
@@ -554,7 +554,7 @@ output$mkt_h<- renderTable({
 
 
 tempo_mkt<- reactive({
-  res<-dbSendQuery(con, paste0("SELECT VECTORES.* FROM VECTORES, Criterias, ADDON WHERE VECTORES.CRITERIA=Criterias.CRITERIA AND ADDON.BU_VERT='", action(), "' AND VECTORES.fecha='", fcal() ,"' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='Market' GROUP BY fdata", sep=""))
+  res<-dbSendQuery(con, paste0("SELECT VECTORES.* FROM VECTORES, Criterias, ADDON WHERE VECTORES.CRITERIA=Criterias.CRITERIA AND ADDON.GEOGRAPHY2='", action(), "' AND VECTORES.fecha='", fcal() ,"' AND ADDON.RU_ID=Criterias.RU_ID AND ADDON.TIPO_RIESGO='Market' GROUP BY fdata", sep=""))
   result<-dbFetch(res)
   tempo_mkt<- as.data.frame(result)
 })
@@ -599,7 +599,7 @@ output$ng_h<- renderTable({
 ####################################################
 # Saldos
 ####################################################
-tempo_am<- reactive({res<-dbSendQuery(con, paste0("SELECT RU_ID FROM ADDON WHERE BU_VERT='", action() , "' AND fecha='", fcal(), "' AND TIPO_RIESGO='Business' GROUP BY BU_VERT,fecha", sep=""))
+tempo_am<- reactive({res<-dbSendQuery(con, paste0("SELECT RU_ID FROM ADDON WHERE GEOGRAPHY2='", action() , "' AND fecha='", fcal(), "' AND TIPO_RIESGO='Business' GROUP BY GEOGRAPHY2,fecha", sep=""))
 result<-dbFetch(res)
 format(result, big.mark=".")
 tempo_am<- as.data.frame(result)
@@ -616,7 +616,7 @@ tempo1_am<- as.data.frame(result1)
 
 #output$tec<- renderTable({left_join(tempo_am(), tempo1_am(), by=c("RU_ID"="RU_ID_ACTIVOS_MATERIALES"))})
 
-output$tec<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_NEGOCIO FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('101104','1010901') AND PYG.fecha='" , fcal() , "' AND ADDON.BU_VERT='", action() ,"' AND PYG.RU_ID_ACTIVOS_MATERIALES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_NEGOCIO" , sep=""))
+output$tec<- renderTable({res<-dbSendQuery(con, paste0("SELECT PYG.U_CdG, PYG.EPIGRAFE,sum(PYG.Importe_2), PYG.COD_DIV1, PYG.RU_ID_NEGOCIO FROM PYG,ADDON WHERE PYG.EPIGRAFE IN('101104','1010901') AND PYG.fecha='" , fcal() , "' AND ADDON.GEOGRAPHY2='", action() ,"' AND PYG.RU_ID_ACTIVOS_MATERIALES=ADDON.RU_ID GROUP BY PYG.U_CdG,PYG.EPIGRAFE,PYG.COD_DIV1, PYG.RU_ID_NEGOCIO" , sep=""))
 result2<-dbFetch(res)
 format(result2, big.mark=".")
 })

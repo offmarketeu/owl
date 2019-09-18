@@ -21,24 +21,28 @@ EC4_UI <- function (id) {
   nss <- NS(id)
   tabsetPanel(
     
-    tabPanel("General",
+    tabPanel("Control",
              tagList(
-               
+               h3("Control1 - Numero de RUs"),
+               h3(),
+               tableOutput(nss("globalct1")),
+               h3(),
+               h3("Control2 - Correlacion Mayorista"),
+               h3(),
+               tableOutput(nss("globalct2")),
+               h3(),
+               h3("Control3 - Correlacion Minorista"),
+               h3(),
+               tableOutput(nss("globalct2"))
+             )
+             ),
+    
+    tabPanel("General ",
+             tagList(
                h3("Datos Generales"),
                h3(),
-               tableOutput(nss("globaltb")),
-               h3(),
-               h3("Capital historico"),
-               h3(),
-               tableOutput(nss("am_h")),
-               h3(),
-               actionButton(nss("ma_avg"), "Media",style="color: #fff; background-color: #cb3234; border-color: #2e6da4"),
-               h3(),
-               tableOutput(nss("am_avg")),
-               h3(),
-               h3("Saldos"),
-               h3(),
-               tableOutput(nss("tec"))
+               tableOutput(nss("globaltb"))
+               
              )
     ),
     ##############################################################
@@ -193,76 +197,58 @@ EC4_UI <- function (id) {
 
 EC4 <- function (input, output, session, act1, act2){
   
-  
-  fbase1 <- reactive( {
-    fbase1<-read_excel(as.character(act1()), skip=4, col_names=TRUE, na = "")
-    fbase1[is.na(fbase1)]<-0
-    fbase1<-fbase1[,c(1:4, 70:78)]
-    #fmod1$GEOGRAPHY2[(fmod1$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
+  fbase <- reactive( {
+    read_excel(path = act1(), skip = 4)
   })
   
-  fbase2 <- reactive( {
-    fbase2<-read_excel(as.character(act2()), skip=4, col_names=TRUE, col_types="numeric",na = "")
+  fmod <- reactive( {
+    read_excel(path = act2(), skip = 4)
   })
-  
-  
-  fbase <- reactive({
-    fbase<- bind_cols(as.data.frame(fbase1()),as.data.frame(fbase2()))
-    as.data.frame(fbase)
-    fbase<- fbase[, - c(14:17,83:91)]
-    fbase %>% mutate_if(is.numeric , replace_na, replace = 0)
-    fbase %>% mutate(GEOGRAPHY2=ifelse(TIPO_RIESGO=="Goodwill", "Corporate Activities", GEOGRAPHY2))
-    
-  })
-  
-  
-  
-  
-  
-  # Proceso de fusion mod
-  
-  fmod1 <- reactive( {
-    fmod1<-read_excel(as.character(act2()), skip=4, col_names=TRUE, na = "")
-    fmod1[is.na(fmod1)]<-0
-    fmod1<-fmod1[,c(1:4, 70:78)]
-    #fmod1$GEOGRAPHY2[(fmod1$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
-  })
-  
-  fmod2 <- reactive( {
-    fmod2<-read_excel(as.character(act2()), skip=4, col_names=TRUE, col_types="numeric",na = "")
-  })
-  
-  
-  fmod <- reactive({
-    fmod<- bind_cols(as.data.frame(fmod1()),as.data.frame(fmod2()))
-    as.data.frame(fmod)
-    fmod<- fmod[, - c(14:17,83:91)]
-    fmod %>% mutate_if(is.numeric , replace_na, replace = 0)
-    #fmod$GEOGRAPHY2[(fmod$TIPO_RIESGO)=="Goodwill"]<- "Corporate Activities"
-    fmod %>% mutate(GEOGRAPHY2=ifelse(TIPO_RIESGO=="Goodwill", "Corporate Activities", GEOGRAPHY2))
-    
-  })
-  
   
   totdata<- reactive ({
-    fmod<- bind_rows(as.data.frame(fbase()),as.data.frame(fmod()))
+    totdata<- bind_rows(as.data.frame(fbase()),as.data.frame(fmod()))
     
   })
+ 
+  output$globaltb <- renderTable({
+    totdata() %>% group_by(ID_SIMULACION) %>% summarise(EC_RTU= sum(EC_DW_RTU_T, na.rm=T)/1000000, EC_RV=sum(REPORTING_V_T, na.rm=T)/1000000,EC_DT= sum(EC_DW_TOTAL_T, na.rm=T)/1000000) 
+  }) 
   
+  ###################################################
+  # Control
+  ###################################################
   
-  #output$globaltb <- renderTable ({
-  #  as.data.frame(fmod())
-  #})
+     ct1<- reactive({
+        ct1<- totdata() %>% group_by(ID_SIMULACION, TIPO_RIESGO) %>% summarise(ru=n())
+        
+      })
   
-  output$globaltb <- reactive ({
-    totdata() %>% group_by(ID_SIMULACION)%>%
-    summarise(EC_DT=sum(EC_DW_TOTAL+EC_DW_TOTAL_CVA)/1000000)
-  })
+     output$globalct1 <- renderTable({
+       as.data.frame(ct1()) %>% spread(ID_SIMULACION, ru)     
+     }) 
+ 
+     ct2<- reactive({
+       ct2<- totdata() %>% select(ID_SIMULACION, GEOGRAPHY2, EAD, CORR_MAY) %>%
+             filter(CORR_MAY!=0) %>%
+             group_by(ID_SIMULACION, GEOGRAPHY2) %>% 
+             summarise(may_p = sum(EAD*CORR_MAY, na.rm=T)/(sum(EAD, na.rm=T)))
+         
+     })
   
-    
-  
-  #output$globaltb <- reactive ({
-  #   as.data.frame(totdata)
-  #})  
-  
+     output$globalct2 <- renderTable({
+       as.data.frame(ct2()) %>% spread(ID_SIMULACION, may_p)     
+     })
+     
+     ct3<- reactive({
+       ct3<- totdata() %>% select(ID_SIMULACION, GEOGRAPHY2, EAD, CORR_MIN) %>%
+         filter(CORR_MIN!=0) %>%
+         group_by(ID_SIMULACION, GEOGRAPHY2) %>% 
+         summarise(min_p = sum(EAD*CORR_MAY, na.rm=T)/(sum(EAD, na.rm=T)))
+       
+     })
+     
+     output$globalct3 <- renderTable({
+       as.data.frame(ct3()) %>% spread(ID_SIMULACION, min_p)     
+     })
+     
 }
